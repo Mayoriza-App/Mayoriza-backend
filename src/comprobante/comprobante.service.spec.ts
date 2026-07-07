@@ -1,6 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TipoComprobante } from 'generated/prisma';
+import { TipoComprobante } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ComprobanteService } from './comprobante.service';
 import { CreateComprobanteDto } from './dto/create-comprobante.dto';

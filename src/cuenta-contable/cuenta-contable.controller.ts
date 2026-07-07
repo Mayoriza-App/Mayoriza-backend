@@ -12,7 +12,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { TipoCuenta } from 'generated/prisma';
+import { TipoCuenta } from '@prisma/client';
 import { CuentaContableResponseDto } from './dto/cuenta-contable-response.dto';
 import { CreateCuentaContableDto } from './dto/create-cuenta-contable.dto';
 import { UpdateCuentaContableDto } from './dto/update-cuenta-contable.dto';

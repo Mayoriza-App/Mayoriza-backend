@@ -1,5 +1,5 @@
 import { IsEnum, IsNotEmpty, IsString, Matches, MaxLength } from 'class-validator';
-import { TipoCuenta } from 'generated/prisma';
+import { TipoCuenta } from '@prisma/client';
 
 export class CreateCuentaContableDto {
   @IsNotEmpty({ message: 'El RUT de la empresa es obligatorio' })

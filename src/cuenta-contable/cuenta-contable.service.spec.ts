@@ -1,6 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TipoCuenta } from 'generated/prisma';
+import { TipoCuenta } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCuentaContableDto } from './dto/create-cuenta-contable.dto';
 import { CuentaContableService } from './cuenta-contable.service';

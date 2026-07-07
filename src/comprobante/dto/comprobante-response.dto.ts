@@ -1,4 +1,4 @@
-import { TipoComprobante } from 'generated/prisma';
+import { TipoComprobante } from '@prisma/client';
 
 /**
  * BFF-shaped response DTO for a single Movimiento (accounting line).

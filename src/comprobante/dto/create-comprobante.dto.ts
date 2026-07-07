@@ -12,7 +12,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TipoComprobante } from 'generated/prisma';
+import { TipoComprobante } from '@prisma/client';
 
 /**
  * DTO for a single accounting line (Movimiento) within a journal entry.

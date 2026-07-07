@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
-import { TipoCuenta } from 'generated/prisma';
+import { TipoCuenta } from '@prisma/client';
 
 export class UpdateCuentaContableDto {
   @IsOptional()

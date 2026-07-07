@@ -12,7 +12,7 @@ import {
 } from './dto/comprobante-response.dto';
 import { CreateComprobanteDto, CreateMovimientoDto } from './dto/create-comprobante.dto';
 import { FilterComprobanteDto } from './dto/filter-comprobante.dto';
-import { Movimiento, TipoComprobante } from 'generated/prisma';
+import { Movimiento, TipoComprobante } from '@prisma/client';
 
 @Injectable()
 export class ComprobanteService {

@@ -1,4 +1,4 @@
-import { RolUsuario } from 'generated/prisma';
+import { RolUsuario } from '@prisma/client';
 
 /**
  * BFF-shaped response DTO for a Usuario resource.

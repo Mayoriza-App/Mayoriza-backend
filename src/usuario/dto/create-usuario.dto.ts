@@ -6,7 +6,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
-import { RolUsuario } from 'generated/prisma';
+import { RolUsuario } from '@prisma/client';
 
 export class CreateUsuarioDto {
   @IsNotEmpty({ message: 'El ID del usuario es obligatorio' })

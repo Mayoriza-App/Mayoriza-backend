@@ -1,4 +1,4 @@
-import { TipoCuenta } from 'generated/prisma';
+import { TipoCuenta } from '@prisma/client';
 
 /**
  * BFF-shaped response DTO for a CuentaContable resource.

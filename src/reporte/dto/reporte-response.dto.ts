@@ -1,4 +1,4 @@
-import { TipoCuenta } from 'generated/prisma';
+import { TipoCuenta } from '@prisma/client';
 
 export interface CuentaBalanceDto {
   cuentaCodigo: string;

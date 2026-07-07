@@ -11,7 +11,7 @@ import {
   LibroMayorCompletoResponseDto,
   CuentaConMovimientosDto,
 } from './dto/reporte-response.dto';
-import { TipoCuenta } from 'generated/prisma';
+import { TipoCuenta } from '@prisma/client';
 
 @Injectable()
 export class ReporteService {

@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CuentaContableResponseDto } from './dto/cuenta-contable-response.dto';
 import { CreateCuentaContableDto } from './dto/create-cuenta-contable.dto';
 import { UpdateCuentaContableDto } from './dto/update-cuenta-contable.dto';
-import { TipoCuenta } from 'generated/prisma';
+import { TipoCuenta } from '@prisma/client';
 
 @Injectable()
 export class CuentaContableService {

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TipoCuenta } from 'generated/prisma';
+import { TipoCuenta } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReporteFilterDto } from './dto/reporte-filter.dto';
 import { ReporteService } from './reporte.service';
