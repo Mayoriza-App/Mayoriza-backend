@@ -1,0 +1,12 @@
+services:
+api:
+build:
+context: .
+dockerfile: Dockerfile
+container_name: mayoriza-api
+restart: unless-stopped
+env_file:
+  - .env.production
+ports:
+  - '3001:3001'
+command: pnpm run start:prod

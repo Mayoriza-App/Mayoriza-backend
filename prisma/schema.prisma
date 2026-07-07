@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Empresa {
+  id           String           @id @default(uuid()) @db.Uuid
+  rut          String           @db.VarChar(12) // Ej: 76.000.000-K
+  razonSocial  String           @map("razon_social") @db.VarChar(255)
+  giro         String           @db.VarChar(255)
+  direccion    String?          @db.VarChar(255)
+  comuna       String?          @db.VarChar(255)
+  ciudad       String?          @db.VarChar(255)
+  telefono     String?          @db.VarChar(50)
+  correo                     String?          @db.VarChar(255)
+  representanteNombre        String?          @map("representante_nombre") @db.VarChar(255)
+  representanteRut           String?          @map("representante_rut") @db.VarChar(12)
+  usuarioId                  String           @map("usuario_id") @db.Uuid
+  activa                    Boolean          @default(true)
+  transferenciaHabilitada    Boolean          @default(false) @map("transferencia_habilitada")
+  transferenciaDestinoEmail  String?          @map("transferencia_destino_email") @db.VarChar(255)
+  usuario      Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  comprobantes Comprobante[]
+  cuentas      CuentaEmpresa[]
+
+  @@unique([rut, usuarioId])
+  @@map("empresas")
+}
+
+model Usuario {
+  id        String           @id @db.Uuid // Este ID debe coincidir exactamente con el UUID de auth.users en Supabase
+  email     String           @unique @db.VarChar(255)
+  nombre                    String                   @db.VarChar(255)
+  rol                       RolUsuario               @default(CONTADOR)
+  activo                    Boolean                  @default(true)
+  empresas                  Empresa[]
+  transferenciasSolicitadas HistorialTransferencia[] @relation("TransferenciasSolicitadas")
+
+  @@map("usuarios")
+}
+
+model HistorialTransferencia {
+  id                  String    @id @default(uuid()) @db.Uuid
+  empresaRut          String    @map("empresa_rut") @db.VarChar(12)
+  razonSocialEmpresa  String    @map("razon_social") @db.VarChar(255)
+  solicitanteId       String    @map("solicitante_id") @db.Uuid // Quien la aprobó
+  destinoEmail        String    @map("destino_email") @db.VarChar(255) // Correo autorizado
+  fechaSolicitud      DateTime  @default(now()) @map("fecha_solicitud")
+  fechaTransferencia  DateTime? @map("fecha_transferencia")
+  estado              String    @default("PENDIENTE") @db.VarChar(50) // PENDIENTE, COMPLETADA, CANCELADA
+
+  solicitante         Usuario   @relation("TransferenciasSolicitadas", fields: [solicitanteId], references: [id])
+
+  @@map("historial_transferencias")
+}
+
+model PlanPlantilla {
+  id      Int               @id @default(autoincrement())
+  nombre  String            @db.VarChar(255)
+  cuentas CuentaPlantilla[]
+
+  @@map("planes_plantilla")
+}
+
+model CuentaPlantilla {
+  id              Int           @id @default(autoincrement())
+  planPlantillaId Int           @map("plan_plantilla_id")
+  codigo          String        @db.VarChar(20) // Ej: "1.1.01.01"
+  nombre          String        @db.VarChar(255)
+  tipo            TipoCuenta    // Enum para Activo, Pasivo, Patrimonio, Resultado
+  activa          Boolean       @default(true)
+
+  planPlantilla   PlanPlantilla @relation(fields: [planPlantillaId], references: [id], onDelete: Cascade)
+
+  @@unique([planPlantillaId, codigo])
+  @@map("cuentas_plantilla")
+}
+
+model CuentaEmpresa {
+  id          Int          @id @default(autoincrement())
+  empresaId   String       @map("empresa_id") @db.Uuid
+  codigo      String       @db.VarChar(20) // Ej: "1.1.01.01"
+  nombre      String       @db.VarChar(255)
+  tipo        TipoCuenta   // Enum para Activo, Pasivo, Patrimonio, Resultado
+  
+  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  movimientos Movimiento[]
+
+  @@unique([empresaId, codigo])
+  @@map("cuentas_empresa")
+}
+
+model Tercero {
+  rut         String       @id @db.VarChar(12)
+  razonSocial String       @map("razon_social") @db.VarChar(255)
+  giro        String?      @db.VarChar(255)
+  direccion   String?      @db.VarChar(255)
+  comuna      String?      @db.VarChar(255)
+  ciudad      String?      @db.VarChar(255)
+  telefono    String?      @db.VarChar(50)
+  correo      String?      @db.VarChar(255)
+  movimientos Movimiento[]
+
+  @@map("terceros")
+}
+
+model CentroCosto {
+  id          Int          @id @default(autoincrement())
+  nombre      String       @db.VarChar(255)
+  movimientos Movimiento[]
+
+  @@map("centros_costo")
+}
+
+model Comprobante {
+  id             Int          @id @default(autoincrement())
+  empresaId      String       @map("empresa_id") @db.Uuid
+  tipo           TipoComprobante // Ingreso, Egreso, Traspaso
+  fecha          DateTime     @db.Date
+  glosaGeneral   String       @map("glosa_general") @db.Text
+  periodoMes     Int          @map("periodo_mes")
+  periodoAnio    Int          @map("periodo_anio")
+  
+  empresa        Empresa      @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  movimientos    Movimiento[]
+
+  @@map("comprobantes")
+}
+
+model Movimiento {
+  id             Int          @id @default(autoincrement())
+  comprobanteId  Int          @map("comprobante_id")
+  cuentaCodigo   String       @map("cuenta_codigo") // Eliminaremos esto pronto, pero lo dejamos temporalmente para la migración si es necesario
+  cuentaEmpresaId Int         @map("cuenta_empresa_id")
+  terceroRut     String?      @map("tercero_rut")
+  centroCostoId  Int?         @map("centro_costo_id")
+  
+  // Uso de BigInt para CLP, evitando desbordamientos (overflows) y decimales.
+  debe           BigInt       @default(0)
+  haber          BigInt       @default(0)
+  
+  glosaLinea     String?      @map("glosa_linea") @db.VarChar(255)
+  
+  siiTipoDte     Int?         @map("sii_tipo_dte")
+  siiFolioDoc    BigInt?      @map("sii_folio_doc") 
+
+  comprobante    Comprobante    @relation(fields: [comprobanteId], references: [id], onDelete: Cascade)
+  cuenta         CuentaEmpresa  @relation(fields: [cuentaEmpresaId], references: [id], onDelete: Restrict)
+  tercero        Tercero?       @relation(fields: [terceroRut], references: [rut], onDelete: SetNull)
+  centroCosto    CentroCosto?   @relation(fields: [centroCostoId], references: [id], onDelete: SetNull)
+
+  @@map("movimientos")
+}
+
+enum TipoCuenta {
+  ACTIVO
+  PASIVO
+  PATRIMONIO
+  RESULTADO_PERDIDA
+  RESULTADO_GANANCIA
+}
+
+enum TipoComprobante {
+  INGRESO
+  EGRESO
+  TRASPASO
+}
+
+enum RolUsuario {
+  CONTADOR
+  ADMIN
+}
