@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
@@ -12,6 +13,8 @@ import { InviteUsuarioDto } from './dto/invite-usuario.dto';
 
 @Injectable()
 export class AdminService {
+  private readonly logger = new Logger(AdminService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -88,6 +91,47 @@ export class AdminService {
         nombre: newUsuario.nombre,
         rol: newUsuario.rol,
       },
+    };
+  }
+
+  /**
+   * Reenvía el email de invitación a un usuario existente.
+   * Reutiliza inviteUserByEmail de Supabase, que genera un token nuevo cada vez.
+   * @param user - Usuario autenticado (del request)
+   * @param id - UUID del usuario al que reenviar la invitación
+   */
+  async reenviarInvitacion(user: any, id: string) {
+    const targetUser = await this.prisma.usuario.findUnique({ where: { id } });
+    if (!targetUser) {
+      throw new NotFoundException(`Usuario con id ${id} no encontrado`);
+    }
+
+    // Re-crear cliente admin (mismo patrón que inviteUsuario)
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SECRET_KEY;
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new InternalServerErrorException(
+        'Supabase Admin SDK no configurado (falta SUPABASE_URL o SUPABASE_SECRET_KEY)',
+      );
+    }
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+
+    const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      targetUser.email,
+      { redirectTo: `${frontendUrl}/auth/callback` },
+    );
+
+    if (error) {
+      this.logger.error(`Error reenviando invitación: ${error.message}`);
+      throw new InternalServerErrorException(
+        `No se pudo reenviar la invitación: ${error.message}`,
+      );
+    }
+
+    return {
+      message: `Invitación reenviada a ${targetUser.email}`,
     };
   }
 

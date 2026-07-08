@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { InviteUsuarioDto } from './dto/invite-usuario.dto';
 
@@ -12,11 +12,13 @@ export class AdminController {
   }
 
   @Post('usuarios')
-  async inviteUsuario(
-    @Req() req: any,
-    @Body() inviteDto: InviteUsuarioDto
-  ) {
+  async inviteUsuario(@Req() req: any, @Body() inviteDto: InviteUsuarioDto) {
     return this.adminService.inviteUsuario(req.user, inviteDto);
+  }
+
+  @Post('usuarios/:id/reenviar-invitacion')
+  async reenviarInvitacion(@Req() req: any, @Param('id') id: string) {
+    return this.adminService.reenviarInvitacion(req.user, id);
   }
 
   @Get('empresas')
@@ -25,18 +27,12 @@ export class AdminController {
   }
 
   @Post('empresas/:rut/transferir')
-  async transferirEmpresa(
-    @Req() req: any,
-    @Param('rut') rut: string,
-  ) {
+  async transferirEmpresa(@Req() req: any, @Param('rut') rut: string) {
     return this.adminService.transferirEmpresa(req.user, rut);
   }
 
   @Patch('usuarios/:id/toggle-status')
-  async toggleUserStatus(
-    @Req() req: any,
-    @Param('id') id: string,
-  ) {
+  async toggleUserStatus(@Req() req: any, @Param('id') id: string) {
     return this.adminService.toggleUserStatus(req.user, id);
   }
 }
