@@ -138,7 +138,7 @@ model Comprobante {
 model Movimiento {
   id             Int          @id @default(autoincrement())
   comprobanteId  Int          @map("comprobante_id")
-  cuentaCodigo   String       @map("cuenta_codigo") // Eliminaremos esto pronto, pero lo dejamos temporalmente para la migración si es necesario
+  cuentaCodigo   String       @map("cuenta_codigo")
   cuentaEmpresaId Int         @map("cuenta_empresa_id")
   terceroRut     String?      @map("tercero_rut")
   centroCostoId  Int?         @map("centro_costo_id")
