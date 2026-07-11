@@ -111,37 +111,36 @@ describe('UsuarioService', () => {
       await expect(service.create(createDto)).rejects.toThrow(ConflictException);
     });
   });
+  describe('update', () => {
+    const updateDto = { nombre: 'Nombre Actualizado' };
 
-  describe('assignEmpresa', () => {
-    const assignDto = {
-      usuarioId: '123e4567-e89b-12d3-a456-426614174000',
-      empresaRut: '76123456-K',
-    };
+    it('should update and return user if exists', async () => {
+      mockPrismaService.usuario.findUnique.mockResolvedValue(mockUsuario);
+      mockPrismaService.usuario.update.mockResolvedValue({ ...mockUsuario, nombre: 'Nombre Actualizado' });
 
-    it('should throw NotFoundException if user does not exist', async () => {
+      const result = await service.update(mockUsuario.id, updateDto);
+      expect(result.nombre).toEqual('Nombre Actualizado');
+      expect(mockPrismaService.usuario.update).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if not found', async () => {
       mockPrismaService.usuario.findUnique.mockResolvedValue(null);
-      await expect(service.assignEmpresa(assignDto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.update('invalid', updateDto)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('remove', () => {
+    it('should delete user if exists', async () => {
+      mockPrismaService.usuario.findUnique.mockResolvedValue(mockUsuario);
+      mockPrismaService.usuario.delete.mockResolvedValue(mockUsuario);
+
+      await expect(service.remove(mockUsuario.id)).resolves.toBeUndefined();
+      expect(mockPrismaService.usuario.delete).toHaveBeenCalledWith({ where: { id: mockUsuario.id } });
     });
 
-    it('should throw NotFoundException if company does not exist', async () => {
-      mockPrismaService.usuario.findUnique.mockResolvedValue(mockUsuario);
-      mockPrismaService.empresa.findUnique.mockResolvedValue(null);
-      await expect(service.assignEmpresa(assignDto)).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('should throw ConflictException if assignment already exists', async () => {
-      mockPrismaService.usuario.findUnique.mockResolvedValue(mockUsuario);
-      mockPrismaService.empresa.findUnique.mockResolvedValue({ rut: '76123456-K' });
-      mockPrismaService.empresaUsuario.findUnique.mockResolvedValue({
-        ...assignDto,
-      });
-      await expect(service.assignEmpresa(assignDto)).rejects.toThrow(
-        ConflictException,
-      );
+    it('should throw NotFoundException if not found', async () => {
+      mockPrismaService.usuario.findUnique.mockResolvedValue(null);
+      await expect(service.remove('invalid')).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -5,7 +5,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service.js';
+import { PrismaService } from '../prisma/prisma.service';
 import { CuentaContableService } from '../cuenta-contable/cuenta-contable.service';
 import { CreateEmpresaDto } from './dto/create-empresa.dto';
 import { EmpresaResponseDto } from './dto/empresa-response.dto';

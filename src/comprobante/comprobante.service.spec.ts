@@ -15,13 +15,22 @@ const mockPrismaService = {
   empresa: {
     findUnique: jest.fn(),
   },
+  cuentaEmpresa: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  movimiento: {
+    deleteMany: jest.fn(),
+    findMany: jest.fn(),
+  },
   $transaction: jest.fn(),
 };
 
 const mockDate = new Date('2026-07-02T12:00:00Z');
 const mockComprobanteEntity = {
   id: 1,
-  empresaRut: '76123456-K',
+  empresaId: 'empresa-id',
+  empresa: { rut: '76123456-K', usuarioId: 'user-1' },
   tipo: TipoComprobante.INGRESO,
   fecha: mockDate,
   glosaGeneral: 'Venta con boleta',
@@ -79,14 +88,14 @@ describe('ComprobanteService', () => {
         mockComprobanteWithLinesEntity,
       ]);
       const filter: FilterComprobanteDto = { empresaRut: '76123456-K' };
-      const result = await service.findAll(filter);
+      const result = await service.findAll('user-1', filter);
 
       expect(result).toHaveLength(1);
       expect(result[0].id).toEqual(1);
       expect(result[0].movimientos).toHaveLength(2); // Full DTO check
       expect(mockPrismaService.comprobante.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { empresaRut: '76123456-K' },
+          where: { empresa: { rut: '76123456-K', usuarioId: 'user-1' } },
         }),
       );
     });
@@ -97,7 +106,7 @@ describe('ComprobanteService', () => {
       mockPrismaService.comprobante.findUnique.mockResolvedValue(
         mockComprobanteWithLinesEntity,
       );
-      const result = await service.findOne(1);
+      const result = await service.findOne('user-1', 1);
 
       expect(result.id).toEqual(1);
       expect(result.movimientos).toHaveLength(2);
@@ -114,7 +123,7 @@ describe('ComprobanteService', () => {
 
     it('should throw NotFoundException if comprobante not found', async () => {
       mockPrismaService.comprobante.findUnique.mockResolvedValue(null);
-      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('user-1', 999)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -134,7 +143,7 @@ describe('ComprobanteService', () => {
 
     it('should throw BadRequestException if less than 2 lines provided', async () => {
       const dto = { ...validCreateDto, movimientos: [{ cuentaCodigo: '1.1', debe: 100 }] };
-      await expect(service.create(dto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-1', dto)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if debe !== haber (unbalanced)', async () => {
@@ -145,8 +154,8 @@ describe('ComprobanteService', () => {
           { cuentaCodigo: '3.1.01', debe: 0, haber: 900 }, // Off by 100
         ],
       };
-      await expect(service.create(dto)).rejects.toThrow(BadRequestException);
-      await expect(service.create(dto)).rejects.toThrow('Diferencia: 100 CLP');
+      await expect(service.create('user-1', dto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-1', dto)).rejects.toThrow('Diferencia: 100 CLP');
     });
 
     it('should throw BadRequestException if total is 0', async () => {
@@ -157,19 +166,19 @@ describe('ComprobanteService', () => {
           { cuentaCodigo: '3.1.01', debe: 0, haber: 0 },
         ],
       };
-      await expect(service.create(dto)).rejects.toThrow(BadRequestException);
+      await expect(service.create('user-1', dto)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if empresaRut does not exist', async () => {
       mockPrismaService.empresa.findUnique.mockResolvedValue(null);
-      await expect(service.create(validCreateDto)).rejects.toThrow(NotFoundException);
+      await expect(service.create('user-1', validCreateDto)).rejects.toThrow(NotFoundException);
     });
 
     it('should successfully run transaction and return mapped DTO on balanced entry', async () => {
-      mockPrismaService.empresa.findUnique.mockResolvedValue({ rut: '76123456-K' });
+      mockPrismaService.empresa.findUnique.mockResolvedValue({ id: 'empresa-id', rut: '76123456-K', usuarioId: 'user-1' });
       mockPrismaService.$transaction.mockResolvedValue(mockComprobanteWithLinesEntity);
 
-      const result = await service.create(validCreateDto);
+      const result = await service.create('user-1', validCreateDto);
 
       expect(mockPrismaService.$transaction).toHaveBeenCalledTimes(1);
       expect(result.totales.cuadrado).toBe(true);
@@ -181,14 +190,97 @@ describe('ComprobanteService', () => {
       mockPrismaService.comprobante.findUnique.mockResolvedValue(mockComprobanteEntity);
       mockPrismaService.comprobante.delete.mockResolvedValue(mockComprobanteEntity);
 
-      await expect(service.remove(1)).resolves.toBeUndefined();
-      expect(mockPrismaService.comprobante.findUnique).toHaveBeenCalledWith({ where: { id: 1 } });
+      await expect(service.remove('user-1', 1)).resolves.toBeUndefined();
+      expect(mockPrismaService.comprobante.findUnique).toHaveBeenCalledWith({ 
+        where: { id: 1, empresa: { usuarioId: 'user-1' } }
+      });
       expect(mockPrismaService.comprobante.delete).toHaveBeenCalledWith({ where: { id: 1 } });
     });
 
     it('should throw NotFoundException if not found on delete', async () => {
       mockPrismaService.comprobante.findUnique.mockResolvedValue(null);
-      await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+      await expect(service.remove('user-1', 999)).rejects.toThrow(NotFoundException);
+    });
+  });
+  describe('update', () => {
+    const updateDto: CreateComprobanteDto = {
+      empresaRut: '76123456-K',
+      tipo: TipoComprobante.EGRESO,
+      fecha: '2026-07-03',
+      glosaGeneral: 'Pago',
+      periodoMes: 7,
+      periodoAnio: 2026,
+      movimientos: [
+        { cuentaCodigo: '1.1.01', debe: 0, haber: 500 },
+        { cuentaCodigo: '2.1.01', debe: 500, haber: 0 },
+      ],
+    };
+
+    it('should update comprobante if valid', async () => {
+      mockPrismaService.comprobante.findUnique.mockResolvedValue(mockComprobanteEntity);
+      mockPrismaService.$transaction.mockResolvedValue(mockComprobanteWithLinesEntity);
+
+      const result = await service.update('user-1', 1, updateDto);
+      expect(result.id).toEqual(1);
+    });
+
+    it('should throw NotFoundException if not found', async () => {
+      mockPrismaService.comprobante.findUnique.mockResolvedValue(null);
+      await expect(service.update('user-1', 999, updateDto)).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException if less than 2 lines', async () => {
+      const badDto = { ...updateDto, movimientos: [{ cuentaCodigo: '1', debe: 10 }] };
+      await expect(service.update('user-1', 1, badDto)).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('generarAsientoCierre', () => {
+    const cierreDto = {
+      empresaRut: '76123456-K',
+      anio: 2026,
+      cuentaPatrimonioCodigo: '3.1.01',
+      fechaCierre: '2026-12-31'
+    };
+
+    it('should generate cierre if there are movements', async () => {
+      mockPrismaService.empresa.findUnique.mockResolvedValue({ id: 'empresa-id', rut: '76123456-K', usuarioId: 'user-1' });
+      mockPrismaService.cuentaEmpresa.findUnique.mockResolvedValue({ tipo: 'PATRIMONIO' });
+      
+      mockPrismaService.movimiento.findMany.mockResolvedValue([
+        { cuentaCodigo: '4.1', debe: 0n, haber: 1000n, cuenta: { tipo: 'RESULTADO_GANANCIA' } },
+        { cuentaCodigo: '5.1', debe: 800n, haber: 0n, cuenta: { tipo: 'RESULTADO_PERDIDA' } }
+      ]);
+      
+      mockPrismaService.$transaction.mockResolvedValue(mockComprobanteWithLinesEntity);
+
+      const result = await service.generarAsientoCierre('user-1', cierreDto);
+      expect(result).toBeDefined();
+    });
+
+    it('should throw NotFoundException if company not found', async () => {
+      mockPrismaService.empresa.findUnique.mockResolvedValue(null);
+      await expect(service.generarAsientoCierre('user-1', cierreDto)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('generarAsientoApertura', () => {
+    const aperturaDto = {
+      empresaRut: '76123456-K',
+      anioAAbrir: 2027,
+      fechaApertura: '2027-01-01'
+    };
+
+    it('should generate apertura if there are movements', async () => {
+      mockPrismaService.empresa.findUnique.mockResolvedValue({ id: 'empresa-id', rut: '76123456-K', usuarioId: 'user-1' });
+      mockPrismaService.movimiento.findMany.mockResolvedValue([
+        { cuentaCodigo: '1.1', debe: 1000n, haber: 0n, cuenta: { tipo: 'ACTIVO' } },
+        { cuentaCodigo: '2.1', debe: 0n, haber: 1000n, cuenta: { tipo: 'PASIVO' } }
+      ]);
+      mockPrismaService.$transaction.mockResolvedValue(mockComprobanteWithLinesEntity);
+
+      const result = await service.generarAsientoApertura('user-1', aperturaDto);
+      expect(result).toBeDefined();
     });
   });
 });

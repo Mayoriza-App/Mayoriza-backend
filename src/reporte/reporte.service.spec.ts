@@ -8,6 +8,9 @@ const mockPrismaService = {
   movimiento: {
     findMany: jest.fn(),
   },
+  comprobante: {
+    findMany: jest.fn(),
+  },
 };
 
 const mockMovimientosBalance = [
@@ -86,7 +89,7 @@ describe('ReporteService', () => {
       mockPrismaService.movimiento.findMany.mockResolvedValue(mockMovimientosBalance);
       
       const filter: ReporteFilterDto = { empresaRut: '76123456-K' };
-      const result = await service.getBalance(filter);
+      const result = await service.getBalance('user-1', filter);
 
       expect(result.cuentas).toHaveLength(4);
 
@@ -114,7 +117,7 @@ describe('ReporteService', () => {
       mockPrismaService.movimiento.findMany.mockResolvedValue(mockMovimientosF29);
 
       const filter: ReporteFilterDto = { empresaRut: '76123456-K' };
-      const result = await service.getBorradorF29(filter);
+      const result = await service.getBorradorF29('user-1', filter);
 
       expect(result.totalIvaDebito).toEqual(570); // 190 + 380
       expect(result.totalIvaCredito).toEqual(95);
@@ -129,11 +132,74 @@ describe('ReporteService', () => {
       ]);
 
       const filter: ReporteFilterDto = { empresaRut: '76123456-K' };
-      const result = await service.getBorradorF29(filter);
+      const result = await service.getBorradorF29('user-1', filter);
 
       expect(result.totalIvaDebito).toEqual(100);
       expect(result.totalIvaCredito).toEqual(500);
       expect(result.ivaAPagar).toEqual(0); // Math.max(0, 100 - 500)
+    });
+  });
+  describe('getLibroDiario', () => {
+    it('should return mapped lineas for libro diario', async () => {
+      mockPrismaService.movimiento.findMany.mockResolvedValue([
+        {
+          id: 1, comprobanteId: 1, debe: 100n, haber: 0n, glosaLinea: 'A',
+          cuenta: { codigo: '1', nombre: 'Caja' },
+          comprobante: { id: 1, fecha: new Date('2026-07-02'), tipo: 'INGRESO', glosaGeneral: 'A' }
+        },
+        {
+          id: 2, comprobanteId: 1, debe: 0n, haber: 100n, glosaLinea: 'B',
+          cuenta: { codigo: '2', nombre: 'Ventas' },
+          comprobante: { id: 1, fecha: new Date('2026-07-02'), tipo: 'INGRESO', glosaGeneral: 'A' }
+        }
+      ]);
+
+      const result = await service.getLibroDiario('user-1', { empresaRut: '123', anio: 2026, mes: 7 });
+      expect(result.lineas).toHaveLength(2);
+      expect(result.totalesMes.debe).toEqual(100); 
+    });
+  });
+
+  describe('getLibroMayor', () => {
+    it('should return movements for a specific account', async () => {
+      mockPrismaService.movimiento.findMany.mockResolvedValue([
+        {
+          id: 1, cuentaCodigo: '1', debe: 100n, haber: 0n,
+          cuenta: { nombre: 'Caja', tipo: 'ACTIVO' },
+          comprobanteId: 1,
+          comprobante: { id: 1, fecha: new Date('2026-07-01'), tipo: 'INGRESO', glosaGeneral: 'A', periodoAnio: 2026, periodoMes: 7 }
+        },
+        {
+          id: 2, cuentaCodigo: '1', debe: 0n, haber: 50n,
+          cuenta: { nombre: 'Caja', tipo: 'ACTIVO' },
+          comprobanteId: 2,
+          comprobante: { id: 2, fecha: new Date('2026-07-02'), tipo: 'EGRESO', glosaGeneral: 'B', periodoAnio: 2026, periodoMes: 7 }
+        }
+      ]);
+
+      const result = await service.getLibroMayor('user-1', { empresaRut: '123', anio: 2026, mes: 7 }, '1');
+      expect(result.cuentaCodigo).toEqual('1');
+      expect(result.lineas).toHaveLength(2);
+      expect(result.totalDebe).toEqual(100);
+      expect(result.totalHaber).toEqual(50);
+      expect(result.saldoFinal).toEqual(50);
+    });
+  });
+
+  describe('getLibroMayorCompleto', () => {
+    it('should return grouped accounts', async () => {
+      mockPrismaService.movimiento.findMany.mockResolvedValue([
+        {
+          id: 1, cuentaCodigo: '1', debe: 100n, haber: 0n,
+          cuenta: { nombre: 'Caja', tipo: 'ACTIVO' },
+          comprobanteId: 1,
+          comprobante: { id: 1, fecha: new Date('2026-07-01'), tipo: 'INGRESO', glosaGeneral: 'A', periodoAnio: 2026, periodoMes: 7 }
+        }
+      ]);
+
+      const result = await service.getLibroMayorCompleto('user-1', { empresaRut: '123', anio: 2026, mes: 7 });
+      expect(result.cuentas).toHaveLength(1);
+      expect(result.cuentas[0].cuentaCodigo).toEqual('1');
     });
   });
 });
